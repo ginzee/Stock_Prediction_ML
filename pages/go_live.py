@@ -6,14 +6,37 @@ from simfin_api import SimFinAPI
 from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
-# Load .env file
-load_dotenv('keys.env')
+def get_simfin_api_key() -> str | None:
+    # 1) Streamlit Cloud / deployment secrets
+    try:
+        if "SIMFIN_API_KEY" in st.secrets:
+            return st.secrets["SIMFIN_API_KEY"]
+    except Exception:
+        pass
 
-# Retrieve API key securely
-api_key = os.getenv("SIMFIN_API_KEY")
+    # 2) Local dev: keys.env file
+    if Path("keys.env").exists():
+        load_dotenv("keys.env")
+        key = os.getenv("SIMFIN_API_KEY")
+        if key:
+            return key
 
-# Initialize SimFin API
+    # 3) Public/demo fallback: allow manual entry
+    st.sidebar.markdown("### 🔑 SimFin API Key")
+    return st.sidebar.text_input(
+        "Enter your SimFin API key",
+        type="password",
+        help="Used only for this session to fetch live data. Not stored."
+    )
+
+api_key = get_simfin_api_key()
+
+if not api_key:
+    st.warning("Please add a SimFin API key via Streamlit Secrets, keys.env, or the sidebar input to continue.")
+    st.stop()
+
 api = SimFinAPI(api_key=api_key)
 
 # Configure the page layout
